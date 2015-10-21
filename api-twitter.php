@@ -1,5 +1,6 @@
 <?php
 
+
 session_start();
 require __DIR__ . "/vendor/autoload.php";
 use Abraham\TwitterOAuth\TwitterOAuth;
@@ -7,7 +8,6 @@ use Abraham\TwitterOAuth\TwitterOAuth;
 define('CONSUMER_KEY', 'uVJwx59DhsSdfgROnF9Q6sItp');
 define('CONSUMER_SECRET', 'u3oDyVcobCc2NQqnCR4shP4lMjYgnbRARQJbUysQc2HFnus22F');
 $access_token = authorizationTwitterUser();
-
 
 ?>
 
@@ -32,10 +32,9 @@ $access_token = authorizationTwitterUser();
         <div class="row">
             <div class="col-md-4">
                 <p><?php
-                    $access_token = authorizationTwitterUser();
                     if ($access_token) {
                         try{
-                            getLast20Mention($access_token);
+                            getLast20Tweets($access_token);
                         }
                         catch(Exception $e){
                             echo "error";
@@ -46,17 +45,24 @@ $access_token = authorizationTwitterUser();
             </div>
             <div class="col-md-4">
                 <p><?php
-                    $access_token = authorizationTwitterUser();
                     if ($access_token) {
-                        getLast20Tweets($access_token);
+                        try{
+                            getLast20Mention($access_token);
+                        }catch (Exception $e){
+                            echo 'error';
+                        }
                     }
                     ?></p>
             </div>
             <div class="col-md-4">
                 <p><?php
-                    $access_token = authorizationTwitterUser();
                     if ($access_token) {
-                        getUserInfo($access_token);
+                        try{
+                            getUserInfo($access_token);
+                        }
+                        catch (Exception $e){
+                            echo "error";
+                        }
                     }
                     ?></p>
             </div>
@@ -125,6 +131,8 @@ function getLast20Tweets($access_token)
     $connection = new TwitterOAuth(CONSUMER_KEY, CONSUMER_SECRET, $access_token['oauth_token'], $access_token['oauth_token_secret']);
     $timeLine = $connection->get("statuses/user_timeline");
 
+    var_dump($timeLine);
+
     echo '<ul>';
     foreach ($timeLine as $tweet) {
         $tweet_text = $tweet->text; //get the tweet
@@ -179,7 +187,6 @@ function authorizationTwitterUser()
 
     $connection = new TwitterOAuth(CONSUMER_KEY, CONSUMER_SECRET);
 
-
     if (isset($_REQUEST['oauth_token']) && !empty($_REQUEST['oauth_token']) && isset($_REQUEST['oauth_verifier']) && !empty($_REQUEST['oauth_verifier'])) {
 
         if (isset($_REQUEST['oauth_token']) && $_SESSION['oauth_token'] !== $_REQUEST['oauth_token']) {
@@ -202,8 +209,7 @@ function authorizationTwitterUser()
         return $_SESSION['access_token'];
     } else {
 
-        $content = $connection->get("account/verify_credentials");
-        $request_token = $connection->oauth('oauth/request_token', array('oauth_callback' => 'https://localhost:63342/test/api-twitter.php'));
+        $request_token = $connection->oauth('oauth/request_token', array('oauth_callback' => 'http://localhost:63342/test/api-twitter.php'));
 
         $_SESSION['oauth_token'] = $request_token['oauth_token'];
         $_SESSION['oauth_token_secret'] = $request_token['oauth_token_secret'];
@@ -215,4 +221,5 @@ function authorizationTwitterUser()
 
 }
 
-?>
+
+
