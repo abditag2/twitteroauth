@@ -1,152 +1,175 @@
 <?php
-
-
+/**
+ * Author: Fardin Abdi
+ * Twitter Oauth1.1 interface
+ */
 session_start();
 require __DIR__ . "/vendor/autoload.php";
 use Abraham\TwitterOAuth\TwitterOAuth;
 
 define('CONSUMER_KEY', 'uVJwx59DhsSdfgROnF9Q6sItp');
 define('CONSUMER_SECRET', 'u3oDyVcobCc2NQqnCR4shP4lMjYgnbRARQJbUysQc2HFnus22F');
-$access_token = authorizationTwitterUser();
-
-?>
-
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <title>Bootstrap Case</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-        <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-    </head>
-    <body>
-
-    <div class="container">
-        <!--    <div class="jumbotron">-->
-        <!--        <h1>The best twitter summary webpage!</h1>-->
-        <!--        <p>We cna write anything here</p>-->
-        <!--    </div>-->
-
-        <div class="row">
-            <div class="col-md-4">
-                <p><?php
-                    if ($access_token) {
-                        try{
-                            getLast20Tweets($access_token);
-                        }
-                        catch(Exception $e){
-                            echo "error";
-                        }
-
-                    }
-                    ?></p>
-            </div>
-            <div class="col-md-4">
-                <p><?php
-                    if ($access_token) {
-                        try{
-                            getLast20Mention($access_token);
-                        }catch (Exception $e){
-                            echo 'error';
-                        }
-                    }
-                    ?></p>
-            </div>
-            <div class="col-md-4">
-                <p><?php
-                    if ($access_token) {
-                        try{
-                            getUserInfo($access_token);
-                        }
-                        catch (Exception $e){
-                            echo "error";
-                        }
-                    }
-                    ?></p>
-            </div>
-        </div>
-    </div>
-
-    </body>
-    </html>
+define('REDIRECT_URL', 'http://localhost:63342/test/api-twitter.php');
 
 
-<?php
 /**
- * Created by PhpStorm.
- * User: tanish
- * Date: 10/20/15
- * Time: 12:05 AM
+ * Example on how to use.
+ * TODO: remove this later
  */
-//
-//session_start();
-//require __DIR__."/vendor/autoload.php";
-//use Abraham\TwitterOAuth\TwitterOAuth;
-//$access_token = authorizationTwitterUser();
-//define('CONSUMER_KEY', 'uVJwx59DhsSdfgROnF9Q6sItp');
-//define('CONSUMER_SECRET', 'u3oDyVcobCc2NQqnCR4shP4lMjYgnbRARQJbUysQc2HFnus22F');
+$access_token = authorizationTwitterUser();
+if ($access_token) {
+    getLast20TweetsAsAHTMLList($access_token);
+    getLast20MentionAsAHTMLList($access_token);
+    getUserInfoAsAHTMLList($access_token);
+}
 
-function getUserInfo($access_token)
+
+
+/**
+ * This function returns user info
+ *
+ * for an example look at function getUserInfoAsAHTMLList
+ *
+ * @param $access_token
+ * @return array of arrays with four elements the following
+ * $rv['followers_count'] =
+ * $rv['friends_count'] =
+ * $rv['listed_count'] =
+ * $rv['favourites_count'] =
+ */
+function getUserInfoInAnArray($access_token)
 {
-
     $connection = new TwitterOAuth(CONSUMER_KEY, CONSUMER_SECRET, $access_token['oauth_token'], $access_token['oauth_token_secret']);
     $user = $connection->get("account/verify_credentials");
 
-    echo '<ul>';
-    echo "<li>followers count: " . $user->followers_count . "</li>";
-    echo "<li>friends count: " . $user->friends_count . "</li>";
-    echo "<li>listed count: " . $user->listed_count . "</li>";
-    echo "<li>favourites count: " . $user->favourites_count . "</li>";
-    echo '</ul>';
+    $rv = array();
+    $rv['followers_count'] = $user->followers_count;
+    $rv['friends_count'] = $user->friends_count;
+    $rv['listed_count'] = $user->listed_count;
+    $rv['favourites_count'] = $user->favourites_count;
 
-}
-
-function getLast20Mention($access_token)
-{
-    $connection = new TwitterOAuth(CONSUMER_KEY, CONSUMER_SECRET, $access_token['oauth_token'], $access_token['oauth_token_secret']);
-    $mentions = $connection->get("statuses/mentions_timeline");
-
-    $reg_exUrl = "/(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/";
-    $reg_exHash = "/#([a-z_0-9]+)/i";
-    $reg_exUser = "/@([a-z_0-9]+)/i";
-
-    echo '<ul>';
-    foreach ($mentions as $tweet) {
-        $tweet_text = $tweet->text; //get the tweet
-
-        $tweet_text = formatTweet($tweet_text);
-        // display each tweet in a list item
-        echo "<li>" . $tweet_text . "</li>";
-    }
-    echo '</ul>';
-
+    return $rv;
 }
 
 
-function getLast20Tweets($access_token)
+/**
+ * this function returns the last tweets, their location, and their link.
+ * it also formats the text of the tweet to make links to the mentioned people and the hashtags
+ *
+ * For an example look at function getLast20MentionAsAHTMLList
+ *
+ * @param $access_token
+ * @return array[][] an array of arrays with three parameters in each element
+ * $oneTweet['text'] = $oneTweet['location']
+ * $oneTweet['link']
+ */
+function getLast20TweetsAsAnArray($access_token)
 {
 
     $connection = new TwitterOAuth(CONSUMER_KEY, CONSUMER_SECRET, $access_token['oauth_token'], $access_token['oauth_token_secret']);
     $timeLine = $connection->get("statuses/user_timeline");
 
-    var_dump($timeLine);
+    $rv = array();
+
+    foreach ($timeLine as $tweet) {
+        $oneTweet = array();
+
+        $oneTweet['text'] = formatTweet($tweet->text);
+        $oneTweet['location'] = $tweet->user->location;
+        $oneTweet['link'] = "https://twitter.com/twitter/status/".$tweet->id;
+
+        $rv[] = $oneTweet;
+    }
+
+    return $rv;
+}
+
+
+/**
+ * returns the last 20 tweets that user was mentioned in. each mention is formatted such that there are links to the users and hashtags
+ * for an example look at function getLast20MentionAsAnArray
+ *
+ * @param $access_token
+ * @return array[][] an array of arrays each with one element
+ * $oneTweet['text']
+ */
+
+function getLast20MentionAsAnArray($access_token)
+{
+    $connection = new TwitterOAuth(CONSUMER_KEY, CONSUMER_SECRET, $access_token['oauth_token'], $access_token['oauth_token_secret']);
+    $mentions = $connection->get("statuses/mentions_timeline");
+
+    $rv = array();
+
+    foreach ($mentions as $tweet) {
+
+        $oneTweet = array();
+        $tweet_text = $tweet->text; //get the tweet
+        $tweet_text = formatTweet($tweet_text);
+        $oneTweet['text'] = $tweet_text;
+        $rv[] = $oneTweet;
+    }
+
+    return $rv;
+}
+
+
+function getUserInfoAsAHTMLList($access_token)
+{
+
+    $user_info = getUserInfoInAnArray($access_token);
+
+    echo '<ul>';
+    echo "<li>followers count: " . $user_info['followers_count'] . "</li>";
+    echo "<li>friends count: " . $user_info['friends_count'] . "</li>";
+    echo "<li>listed count: " . $user_info['listed_count'] . "</li>";
+    echo "<li>favourites count: " . $user_info['favourites_count'] . "</li>";
+    echo '</ul>';
+
+}
+
+
+function getLast20MentionAsAHTMLList($access_token)
+{
+    $mentions = getLast20MentionAsAnArray($access_token);
+
+
+    echo '<ul>';
+    foreach ($mentions as $tweet) {
+        echo "<li>" . $tweet['text'] . "</li>";
+    }
+    echo '</ul>';
+
+}
+
+
+/**
+ * @param $access_token
+ */
+function getLast20TweetsAsAHTMLList($access_token)
+{
+
+
+    $timeLine = getLast20TweetsAsAnArray($access_token);
 
     echo '<ul>';
     foreach ($timeLine as $tweet) {
-        $tweet_text = $tweet->text; //get the tweet
-        $tweet_location = $tweet->user->location;
-        $tweet_id = $tweet->id;
+        $tweet_text = $tweet['text'];
+        $tweet_location = $tweet['location'];
+        $tweet_link = $tweet['link'];
 
-        $tweet_text = formatTweet($tweet_text);
-        echo "<li>" . $tweet_text . "<br> Location: " . $tweet_location . " | <a href=https://twitter.com/twitter/status/$tweet_id>Go to tweet</a></li>";
+        echo "<li>" . $tweet_text . "<br> Location: " . $tweet_location . " | <a href=$tweet_link>Go to tweet</a></li>";
 
     }
     echo '</ul>';
 }
 
 
+/**
+ * This function formats twitter text and adds all the links to accounts, hashtags and mentions.
+ * @param $tweet_text
+ * @return mixed
+ */
 function formatTweet($tweet_text)
 {
     $reg_exUrl = "/(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/";
@@ -182,6 +205,22 @@ function formatTweet($tweet_text)
     return $tweet_text;
 }
 
+
+/**
+ *
+ * This function is for authentication of the user to twitter server.
+ * You should call this function at the beginning of the page before anything else.
+ * If the user is not logged in, it will display a login link that by clicking on it
+ * user will be redirected to twitter login page. Once user came back, this function will put the access the token in the session.
+ *
+ * If the access token is in the session, it will not make a call to twitter api again!
+ *
+ * if not logged in
+ * @return null + echos a login link
+ * if logged in
+ * @return access_token
+ * @throws \Abraham\TwitterOAuth\TwitterOAuthException
+ */
 function authorizationTwitterUser()
 {
 
@@ -209,7 +248,7 @@ function authorizationTwitterUser()
         return $_SESSION['access_token'];
     } else {
 
-        $request_token = $connection->oauth('oauth/request_token', array('oauth_callback' => 'http://localhost:63342/test/api-twitter.php'));
+        $request_token = $connection->oauth('oauth/request_token', array('oauth_callback' => REDIRECT_URI));
 
         $_SESSION['oauth_token'] = $request_token['oauth_token'];
         $_SESSION['oauth_token_secret'] = $request_token['oauth_token_secret'];
